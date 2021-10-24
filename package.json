@@ -1,0 +1,32 @@
+{
+  "name": "angelbeats",
+  "version": "1.0.0",
+  "description": "A discord bot that plays music",
+  "main": "index.js",
+  "scripts": {
+    "start": "ts-node ./src/index.js",
+    "test": "nodemon --exec ts-node ./src/index.ts",
+    "build": "tsc ./dist"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ThevinSilva/AngelBeats.git"
+  },
+  "keywords": [
+    "Discord",
+    "Bot"
+  ],
+  "author": "Thevin Silva",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ThevinSilva/AngelBeats/issues"
+  },
+  "homepage": "https://github.com/ThevinSilva/AngelBeats#readme",
+  "devDependencies": {
+    "nodemon": "^2.0.14",
+    "ts-node": "^10.4.0"
+  },
+  "dependencies": {
+    "discord.js": "^13.2.0"
+  }
+}
