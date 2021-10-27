@@ -8,6 +8,6 @@ interface GuildMapData {
 // don't need to reinvent the wheel 
 // simply need to check whether a certain key exists
 // before entering new data
-const GuildMap = new Map()
+const guildMap = new Map()
 
-export default GuildMap
+export default guildMap

@@ -1,6 +1,10 @@
 import constants from "./constants";
-import { Intents, Client, Collection } from "discord.js";
+import { Intents, Client, Collection, GuildMember } from "discord.js";
+import { Snowflake } from "discord.js";
 import fs from "fs";
+import GuildQueue from "./guildQueue";
+import { DiscordGatewayAdapterCreator } from "@discordjs/voice";
+
 
 //BOT token used to login to discord
 
@@ -26,24 +30,62 @@ client.once("ready", () => {
     console.log("ready")
 })
 
+
+
+//global hash table of servers/guilds each server property contains a queue of songs
+
+
+const guildMap:Map<Snowflake,GuildQueue> = new Map()
+
+
+
+
 client.on('interactionCreate', async interaction => {
     
     
     if(!interaction.isCommand()) return;
 
     const command = (client as any).commands.get(interaction.commandName);
+    const voiceChannel =  (interaction.member as GuildMember).voice.channel;
+    const member : GuildMember = interaction.member as GuildMember
 
 	if (!command) return;
- 
-	try {
-		await command.execute(interaction,interaction.member,interaction.guild,client);
-	} catch (error) {
-		console.error(error);
-		await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
-	}
-    
+    //check whether a guild exists in the guildMap if not create an entry
+	if(interaction.guildId){
+        if(voiceChannel){
+            
+            if(!Array.from(guildMap.keys()).includes(interaction.guildId)){
 
+                    guildMap.set(interaction.guildId,
+                        new GuildQueue(
+                            interaction.guildId, 
+                            voiceChannel.id,
+                            voiceChannel.guild.voiceAdapterCreator as DiscordGatewayAdapterCreator
+                        )
+                    )
+
+                }
+
+                const guildQueue = guildMap.get(interaction.guildId)
+                //commands gets executed
+                try {
+                    await command.execute(interaction,interaction.member,guildQueue);
+                } catch (error) {
+                    console.error(error);
+                    await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
+                }
+        
+            }
+            else{
+                await interaction.reply({content:`${member.displayName} please join a voice channel`, ephemeral:false}); 
+                return 
+            }
+
+
+        
+    }
 })
+
 
 
 // add audio event listner that maintains the GuildMap / Track Queue when a song is finished

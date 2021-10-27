@@ -1,7 +1,7 @@
 import {AudioResource, createAudioResource, demuxProbe} from '@discordjs/voice';
-import ytdl from 'ytdl-core';
+import { raw as ytdl } from "youtube-dl-exec";
 
-// Track interfaces two libraries yt-dl and discord/voices
+// Track interfaces two libraries "youtube-dl-exec" and "discordjs/voices"
 // It gets a stream of audio from yt then converts it into 
 // a "AudioResource" which subsequently enables it to 
 // be read by a "AudioPlayer"
@@ -11,18 +11,52 @@ class Track{
 
     //NOTE : typescript doesn't want to recognise "Readable" as a type I'm sorry
     // I know this is bad practise
-    public ytStream: any;
+    public url: string;
     public title: string; 
 
-    constructor(url:string,title:string){
+    public constructor(url:string,title:string){
         this.title = title
-        this.ytStream = ytdl(url, { filter: 'audioonly' });
+        this.url = url
     }
 
-    public async getAudioResource():Promise<AudioResource>{
-	    const { stream , type } = await demuxProbe(this.ytStream);
-	    return createAudioResource(stream, { inputType : type})
-    }
+    /*
+    * I plagerised this for this I used "ytdl-core" which was a piece of shit 
+    * @link: https://github.com/discordjs/voice/blob/main/examples/music-bot/src/music/track.ts
+    */
+
+	public createAudioResource(): Promise<AudioResource<Track>> {
+		return new Promise((resolve, reject) => {
+
+			const process = ytdl(
+				this.url,
+				{
+					o: '-',
+					q: '',
+					f: 'bestaudio[ext=webm+acodec=opus+asr=48000]/bestaudio',
+					r: '100K',
+				},
+				{ stdio: ['ignore', 'pipe', 'ignore'] },
+			);
+
+			if (!process.stdout) {
+				reject(new Error('No stdout'));
+				return;
+			}
+			const stream = process.stdout;
+			const onError = (error: Error) => {
+				if (!process.killed) process.kill();
+				stream.resume();
+				reject(error);
+			};
+			process
+				.once('spawn', () => {
+					demuxProbe(stream)
+						.then((probe) => resolve(createAudioResource(probe.stream, { metadata: this, inputType: probe.type })))
+						.catch(onError);
+				})
+				.catch(onError);
+		});
+	}
 
 }
 

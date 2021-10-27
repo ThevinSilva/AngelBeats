@@ -7,9 +7,10 @@ A discrod bot that plays music.
 - finish boiler plate ✔️
 - implement command parser ✔️
 - implement ytdl-core ✔️
-- implement FFMPEG Stream ✔️
-- implement Guild/server hash-table/store
-- implement commands join
+- implement FFMPEG Stream ❌ --> implement youtube-dl ✔️
+- implement Guild/server hash-table/store ✔️
+- implement command play ✔️
+- implement commands join , pause , resume , skip, leave, shuffle, queue
 
 ##Note
 

@@ -1,17 +1,9 @@
 import { SlashCommandBuilder } from '@discordjs/builders';
-import { Channel, ChannelManager, Client, CommandInteraction, Guild, GuildMember, MessageEmbed, TextBasedChannels  } from 'discord.js';
-import { joinVoiceChannel, createAudioPlayer, createAudioResource, demuxProbe, DiscordGatewayAdapterCreator } from '@discordjs/voice';
+import {  CommandInteraction, GuildMember, MessageEmbed, TextBasedChannels  } from 'discord.js';
 import yts from "yt-search";
-import ytdl from 'ytdl-core';
-
-//global hash table of servers/guilds each server property contains a queue of songs
+import GuildQueue from "../guildQueue";
 
 
-//fix the any issue
-const probeAndCreateAudioResource = async (ytStream: any) => {
-	const { stream , type } = await demuxProbe(ytStream);
-	return createAudioResource(ytStream, { inputType : type})
-}
 
 export = {
 	data: new SlashCommandBuilder()
@@ -23,43 +15,30 @@ export = {
 				.setRequired(true)
 			)
 		,
-	async execute(interaction:CommandInteraction,member:GuildMember,guild:Guild,client:Client){
-		//Check whether the user is in a voicechannel
-		const userInput = interaction.options.getString("input")
-		const voiceChannel =  member.voice.channel;
-		const textChannel = interaction.channel
-
+	async execute(interaction:CommandInteraction,member:GuildMember,guildQueue:GuildQueue){
+		const userInput = interaction.options.getString("input") as string;
+		const song = (await yts(userInput)).videos[0];
+		const empty = guildQueue.isEmpty();
 
 		
-		if(voiceChannel){
-			await interaction.reply({content:`Joinned ${voiceChannel.name} `, ephemeral:false});
-			const connection = joinVoiceChannel({
-				channelId: voiceChannel.id,
-				guildId: voiceChannel.guild.id,
-				adapterCreator: voiceChannel.guild.voiceAdapterCreator as DiscordGatewayAdapterCreator,
-			});
-			//parsing input
-			const song = await (await yts(userInput as string)).videos[0];
+		const textChannel = interaction.channel
+		
+		// inside a command, event listener, etc.
+		const ytSearchEmbed = new MessageEmbed()
+		.setColor('#000000')
+		.setTitle(`by ${song.author.name}`)
+		.setURL(song.url)
+		.setAuthor(song.title)
+		// .setDescription(song.description)
+		.setImage(song.thumbnail)			
+		
+		//adds song to the queue
+		await guildQueue.enqueue(song.url, song.title)
 
-			// inside a command, event listener, etc.
-			const ytSearchEmbed = new MessageEmbed()
-				.setColor('#000000')
-				.setTitle(`by ${song.author.name}`)
-				.setURL(song.url)
-				.setAuthor(`🎶 NOW PLAYING - ${song.title}`)
-				.setDescription(song.description)
-				.setThumbnail(song.thumbnail)			
-			
-			await (textChannel as TextBasedChannels).send({embeds: [ytSearchEmbed]});
-			const mp3Stream = ytdl(song.url, { filter: 'audioonly' });
-			const audioPlayer = createAudioPlayer()
-			await audioPlayer.play(await probeAndCreateAudioResource(mp3Stream))
-			await connection.subscribe(audioPlayer)
-			return
-		}else{
-			await interaction.reply({content:`${member.displayName} please join a voice channel`, ephemeral:false});
-			return 
-		}
+		 
+		await (textChannel as TextBasedChannels).send({embeds: [ytSearchEmbed]});
+		interaction.reply({ content: "🎶 added to queue" })
+
 		
 	},
 };

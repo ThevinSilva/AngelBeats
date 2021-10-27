@@ -1,19 +1,26 @@
-import Track from "track";
-import { joinVoiceChannel ,DiscordGatewayAdapterCreator, CreateAudioPlayerOptions, createAudioPlayer, AudioResource } from "@discordjs/voice";
+import Track from "./track";
+import {joinVoiceChannel ,
+        DiscordGatewayAdapterCreator,
+        createAudioPlayer,
+        AudioResource,
+        AudioPlayerStatus 
+} from "@discordjs/voice";
 import { Snowflake } from "discord.js";
+// import util from "util";
 
 
 interface GuildQueueData{
     //structure of Guild
     guildId: Snowflake,
     channelId:Snowflake,
-    enqueue:(url:string,title:string) => void,
+    enqueue:(url:string,title:string) => Promise<void>,
     isEmpty:() => Boolean, 
-    emptyQueue: () => void,
+    stop: () => void,
     display: () => Track[],
-    playNext:()=> Promise<String>,
-    pause:()=>void,
-    resume:()=>void,
+    playNext:() => Promise<void>,
+    pause:() => Promise<Boolean>,
+    resume:() => Promise<Boolean>,
+
     
 };
 
@@ -21,14 +28,16 @@ class GuildQueue implements GuildQueueData{
     
     public readonly guildId;
     public readonly channelId;
+    private playing;
     private connection;
     private audioPlayer;
     private queue:Track[];
      
     
-    constructor(guildId:Snowflake, channelId: Snowflake ,adapterCreator: DiscordGatewayAdapterCreator){
+    public constructor(guildId:Snowflake, channelId: Snowflake ,adapterCreator: DiscordGatewayAdapterCreator){
         this.guildId = guildId;
         this.channelId = channelId;
+        this.playing = false; 
         this.connection = joinVoiceChannel({
             	channelId,
 				guildId,
@@ -36,12 +45,29 @@ class GuildQueue implements GuildQueueData{
         });
         this.audioPlayer = createAudioPlayer();
         this.connection.subscribe(this.audioPlayer);
-        this.queue = [];  
+        this.queue = [];
+
+
+		this.audioPlayer.on('stateChange', (oldState, newState) => {
+            console.log("oldState",oldState.status)
+            console.log("newstate",newState.status)
+            if(newState.status === AudioPlayerStatus.Idle && oldState.status !== AudioPlayerStatus.Idle){
+                this.playing = false
+                this.playNext()
+            }else{
+                this.playing = true
+            }
+            console.log(this.playing)
+		});
+
+
+
     }
 
-    public enqueue(url:string,title:string):void{
+    public async enqueue(url:string,title:string){
         //add promise to queue
         this.queue.push(new Track(url,title));
+        this.playNext()
     }
 
     public isEmpty():boolean{
@@ -49,8 +75,9 @@ class GuildQueue implements GuildQueueData{
         else return false  
     }
 
-    public emptyQueue(){
+    public stop(){
         //removes songs in the queue
+        this.audioPlayer.stop()
         this.queue = []
     }
 
@@ -59,30 +86,54 @@ class GuildQueue implements GuildQueueData{
     }
 
     public async playNext(){
+        // dequeueing from the queue
         //Audioplayer plays the next track in the queue
-       if(!this.isEmpty()){ 
-           const track : Track = this.queue.pop() as Track
+       if(!this.isEmpty() && !this.playing){ 
+           const track : Track = this.queue.shift() as Track
             try{
-                const trackAudioResource : AudioResource = await track.getAudioResource()
-                this.audioPlayer.play(trackAudioResource)  } 
+                const trackAudioResource : AudioResource = await track.createAudioResource()
+                this.audioPlayer.play(trackAudioResource)  
+            } 
             catch(e){
                 this.playNext()
-                return `Failed to load ${track.title} skip to next song`
+                // Fails loading a track
+                console.log(e)
             }
-            return `Playing Next Song ${track.title}`
+            // plays
+            
         }
-        return `the Queue is Empty`
+        
     }
 
     public async pause(){
         //audioplayer pauses music
-        this.audioPlayer.pause()
+        if (this.audioPlayer.state.status != AudioPlayerStatus.Paused){            
+            this.audioPlayer.pause()
+            return true        
+        }
+        else{
+            return false
+        }
     }
 
     public async resume(){
         //Audioplayer plays the next track in the queue
-        this.audioPlayer.unpause()
+        if (this.audioPlayer.state.status == AudioPlayerStatus.Paused){
+            this.audioPlayer.unpause()
+            return true
+        }
+        else{
+            return false
+        }
     }
+
+
+
+    /** 
+    * checks whether the audio player is currently idle  
+    * @summary If the description is long, write your summary here. Otherwise, feel free to remove this.
+    */
+
 }
 
 export default GuildQueue
