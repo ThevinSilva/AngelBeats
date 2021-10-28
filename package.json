@@ -1,4 +1,7 @@
 {
+  "engines": {
+  "node": "17.0.1"
+},
   "name": "angelbeats",
   "version": "1.0.0",
   "description": "A discord bot that plays music",
