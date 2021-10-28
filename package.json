@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node ./dist/index.js",
     "build": "tsc",
+    "postinstall": "tsc",
     "deploy": "node ./dist/deploy-commands.js"
   },
   "repository": {
