@@ -2,11 +2,14 @@ import constants from "./constants";
 import { Intents, Client, Collection, GuildMember } from "discord.js";
 import { Snowflake } from "discord.js";
 import fs from "fs";
-import GuildQueue from "./guildQueue";
+import GuildQueue from "./interfaces/guildQueue";
 import { DiscordGatewayAdapterCreator } from "@discordjs/voice";
 
+/** 
+* Boiler plate from the official guide to discordjs
+* @link:https://discordjs.guide/
+*/
 
-//BOT token used to login to discord
 
 //create a new Client instance
 const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_VOICE_STATES] });
@@ -18,7 +21,6 @@ const commandFiles:string[] = fs.readdirSync("./src/commands")
     .filter(file => file.endsWith(".ts") || file.endsWith(".js") )
 
 //adding commands to the collection at the start of the program
-
 for(let file of commandFiles){
     console.log(file)
     const command = require(`./commands/${file.split(".")[0]}.js`);
@@ -30,19 +32,12 @@ client.once("ready", () => {
     console.log("ready")
 })
 
-
-
 //global hash table of servers/guilds each server property contains a queue of songs
-
-
 const guildMap:Map<Snowflake,GuildQueue> = new Map()
-
-
-
 
 client.on('interactionCreate', async interaction => {
     
-    
+    //exits function if command is invalid
     if(!interaction.isCommand()) return;
 
     const command = (client as any).commands.get(interaction.commandName);
@@ -55,7 +50,8 @@ client.on('interactionCreate', async interaction => {
         if(voiceChannel){
             
             if(!Array.from(guildMap.keys()).includes(interaction.guildId)){
-
+                    // if "guildMap" doesn't contain this guildId then
+                    // add the server 
                     guildMap.set(interaction.guildId,
                         new GuildQueue(
                             interaction.guildId, 
@@ -66,28 +62,35 @@ client.on('interactionCreate', async interaction => {
 
                 }
 
+                //queue of tracks that belong to this particular Discord Server
                 const guildQueue = guildMap.get(interaction.guildId)
-                //commands gets executed
+
                 try {
                     await command.execute(interaction,interaction.member,guildQueue);
+                    
+                    /** 
+                    * NOTE : special case "leave" command needs to remove a guildQueue from the GuildMap hash-table.
+                    *        Although this is poorly designed, it saves having to send guildMap back and forth
+                    *        for each command which is far better for performance. 
+                    */
+                    if(interaction.commandName === "leave"){
+                        if(guildMap.has(interaction.guildId)) guildMap.delete(interaction.guildId)
+
+                    }
                 } catch (error) {
                     console.error(error);
                     await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
                 }
-        
             }
             else{
                 await interaction.reply({content:`${member.displayName} please join a voice channel`, ephemeral:false}); 
                 return 
-            }
-
-
-        
+            }        
     }
 })
 
 
 
-// add audio event listner that maintains the GuildMap / Track Queue when a song is finished
 
+// Make sure the evn file containing bot token exists 
 client.login(constants.TOKEN)

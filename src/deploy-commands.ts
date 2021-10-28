@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "@discordjs/builders";
+//script used to deploy commands note this isn't used by the bot 
 import {REST} from "@discordjs/rest";
 import fs from 'fs';
 import { Routes } from "discord-api-types/v9";
@@ -26,7 +26,7 @@ const rest = new REST({ version: '9' }).setToken(constants.TOKEN);
 
 		await rest.put(
 			//remove the constants.GUILD_ID parameter 
-			Routes.applicationGuildCommands(constants.CLIENT_ID, constants.GUILD_ID),
+			Routes.applicationCommands(constants.CLIENT_ID),
 			{ body: commands },
 		);
 

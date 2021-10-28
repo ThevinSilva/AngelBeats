@@ -1,16 +1,14 @@
 import {AudioResource, createAudioResource, demuxProbe} from '@discordjs/voice';
 import { raw as ytdl } from "youtube-dl-exec";
 
-// Track interfaces two libraries "youtube-dl-exec" and "discordjs/voices"
+// Track interfaces with two libraries "youtube-dl-exec" and "discordjs/voices"
 // It gets a stream of audio from yt then converts it into 
 // a "AudioResource" which subsequently enables it to 
 // be read by a "AudioPlayer"
-// please refer to https://www.npmjs.com/package/ytdl-core#ytdlchooseformatformats-options
+// please refer to https://discordjs.github.io/voice/
 // for further clarification
 class Track{
 
-    //NOTE : typescript doesn't want to recognise "Readable" as a type I'm sorry
-    // I know this is bad practise
     public url: string;
     public title: string; 
 
@@ -20,7 +18,7 @@ class Track{
     }
 
     /*
-    * I plagerised this for this I used "ytdl-core" which was a piece of shit 
+    * I plagerised this this I originally used "ytdl-core" which was a piece of shit 
     * @link: https://github.com/discordjs/voice/blob/main/examples/music-bot/src/music/track.ts
     */
 

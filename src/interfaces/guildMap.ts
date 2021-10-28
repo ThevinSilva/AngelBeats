@@ -1,4 +1,4 @@
-import { Guild, GuildMember, Snowflake } from "discord.js";
+import { Snowflake } from "discord.js";
 import GuildQueue from "./guildQueue";
 
 interface GuildMapData {
