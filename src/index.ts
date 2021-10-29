@@ -49,14 +49,24 @@ client.on('interactionCreate', async interaction => {
 	if(interaction.guildId){
         if(voiceChannel){
             
-            if(!Array.from(guildMap.keys()).includes(interaction.guildId)){
+            if(!guildMap.has(interaction.guildId)){
                     // if "guildMap" doesn't contain this guildId then
                     // add the server 
                     guildMap.set(interaction.guildId,
                         new GuildQueue(
                             interaction.guildId, 
                             voiceChannel.id,
-                            voiceChannel.guild.voiceAdapterCreator as DiscordGatewayAdapterCreator
+                            voiceChannel.guild.voiceAdapterCreator as DiscordGatewayAdapterCreator,
+                            async () => {
+                    
+                                /* 
+                                    NOTE : special case "leave" command needs to remove a guildQueue from the GuildMap hash-table.
+                                           Although this is poorly designed, it saves having to send guildMap back and forth
+                                           for each command which is far better for performance. 
+                                */
+
+                                guildMap.delete(interaction.guildId as Snowflake)
+                            }
                         )
                     )
 
@@ -67,16 +77,6 @@ client.on('interactionCreate', async interaction => {
 
                 try {
                     await command.execute(interaction,interaction.member,guildQueue);
-                    
-                    /** 
-                    * NOTE : special case "leave" command needs to remove a guildQueue from the GuildMap hash-table.
-                    *        Although this is poorly designed, it saves having to send guildMap back and forth
-                    *        for each command which is far better for performance. 
-                    */
-                    if(interaction.commandName === "leave"){
-                        if(guildMap.has(interaction.guildId)) guildMap.delete(interaction.guildId)
-
-                    }
                 } catch (error) {
                     console.error(error);
                     await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });

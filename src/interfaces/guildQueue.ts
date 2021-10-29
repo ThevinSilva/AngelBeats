@@ -3,15 +3,23 @@ import {joinVoiceChannel ,
         DiscordGatewayAdapterCreator,
         createAudioPlayer,
         AudioResource,
-        AudioPlayerStatus 
+        AudioPlayerStatus, 
+        VoiceConnectionStatus,
+        VoiceConnectionDisconnectReason,
+        entersState
 } from "@discordjs/voice";
 import { Snowflake } from "discord.js";
+import { promisify } from 'node:util';
 
-/** 
-* Each Server/Guild contains one audioPlayer.
-* I wrote a adapter class that represents the queue that each Discord Server controlls.
-* It snowballed into kind of a monolith so I will try to explain any intricacies as best 
-* I can...
+const wait = promisify(setTimeout)
+
+/* 
+    Each Server/Guild contains one audioPlayer.
+    I wrote a adapter class that represents the queue that each Discord Server controlls.
+    It snowballed into kind of a monolith so I will try to explain any intricacies as best 
+    I can...
+    Refactor note This ended up plagerising this
+    @link - https://github.com/discordjs/voice/blob/main/examples/music-bot/src/music/subscription.ts
 */
 
 
@@ -36,12 +44,14 @@ class GuildQueue implements GuildQueueData{
     public readonly guildId;
     public channelId;
     private queue:Track[];
+    private readyLock: Boolean;
     private playing;
     private connection;
     private audioPlayer;
+    private removeGuild: () => Promise<void>;
      
     
-    public constructor(guildId:Snowflake, channelId: Snowflake ,adapterCreator: DiscordGatewayAdapterCreator){
+    public constructor(guildId:Snowflake, channelId: Snowflake ,adapterCreator: DiscordGatewayAdapterCreator, callback:() => Promise<void>){
         this.guildId = guildId;
         this.channelId = channelId;
         this.playing = false; 
@@ -52,9 +62,57 @@ class GuildQueue implements GuildQueueData{
         });
         this.audioPlayer = createAudioPlayer();
         this.connection.subscribe(this.audioPlayer);
+        this.readyLock = false;
         this.queue = [];
+        this.removeGuild = callback;
 
+        // Event Listener - listen do Disconnect
+        this.connection.on('stateChange', async (_, newState) => {
+            if(newState.status === VoiceConnectionStatus.Disconnected){
+                if(newState.reason === VoiceConnectionDisconnectReason.WebSocketClose && newState.closeCode == 4014){
 
+                   try {
+                       // Probably moved voice channel
+						await entersState(this.connection, VoiceConnectionStatus.Connecting, 5_000);
+					} catch {
+						// Probably removed from voice channel
+                        this.destroy();
+					}
+
+                } else if (this.connection.rejoinAttempts < 5) {
+					/*
+						The disconnect in this case is recoverable, and we also have <5 repeated attempts so we will reconnect.
+					*/
+					await wait((this.connection.rejoinAttempts + 1) * 5_000);
+					this.connection.rejoin();
+				} else {
+					/*
+					    The disconnect in this case may be recoverable, but we have no more remaining attempts - destroy.
+					*/
+					this.destroy();
+				}
+            }else if(!this.readyLock && 
+                (newState.status === VoiceConnectionStatus.Connecting || newState.status === VoiceConnectionStatus.Signalling)){
+                    this.readyLock = true;
+
+				/*
+					In the Signalling or Connecting states, we set a 20 second time limit for the connection to become ready
+					before destroying the voice connection. This stops the voice connection permanently existing in one of these
+					states.
+				*/
+
+                    try{
+                        await entersState(this.connection, VoiceConnectionStatus.Ready, 20_000);
+                    }catch(e){
+                        if (this.connection.state.status !== VoiceConnectionStatus.Destroyed) this.destroy();
+                    }finally{
+                        this.readyLock = false;
+                    }
+                }
+
+        })
+
+        // Event Listener - When BOT becomes idle next track is played
 		this.audioPlayer.on('stateChange', (oldState, newState) => {
             console.log("oldState",oldState.status)
             console.log("newstate",newState.status)
@@ -72,8 +130,8 @@ class GuildQueue implements GuildQueueData{
     }
 
     /* 
-    * NOTE: Dear future me or anyone else looking at this monolith
-    * why is everything async u might ask and the answer is "performance" innit
+        NOTE: Dear future me or anyone else looking at this monolith
+        why is everything async u might ask and the answer is "performance" innit
     */
 
     public async enqueue(url:string,title:string){
@@ -101,21 +159,25 @@ class GuildQueue implements GuildQueueData{
 
     public destroy(){
         //removes songs in the queue
-        this.audioPlayer.stop()
         this.connection.destroy()
-        
+        this.audioPlayer.stop(true)
+        this.removeGuild().
+            then(() => {
+                console.log(" Guild has been removed ")
+            })
+            
     }
 
     /*
-    * Getter method for queue
+        Getter method for queue
     */
     public display(){
         return this.queue
     }
 
     /*
-    * shuffles the order of the queue
-    * implements Fisher Yates(Kuth) Shuffle
+        shuffles the order of the queue
+        implements Fisher Yates(Kuth) Shuffle
     */
     public async shuffle(){
         

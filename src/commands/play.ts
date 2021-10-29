@@ -19,6 +19,7 @@ export = {
 		const userInput = interaction.options.getString("input") as string;
 		const playlistId = userInput.match(/^.*(youtu.be\/|list=)([^#\&\?]*).*/);
 		const textChannel = interaction.channel
+
 		console.log(playlistId)
 
 		if(playlistId && playlistId[2]){
