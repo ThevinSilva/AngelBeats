@@ -4,7 +4,10 @@ import { Snowflake } from "discord.js";
 import fs from "fs";
 import GuildQueue from "./interfaces/guildQueue";
 import { DiscordGatewayAdapterCreator } from "@discordjs/voice";
+import { promisify } from "util"
 
+
+const wait = promisify(setTimeout)
 /** 
 * Boiler plate from the official guide to discordjs
 * @link:https://discordjs.guide/
@@ -89,8 +92,14 @@ client.on('interactionCreate', async interaction => {
     }
 })
 
-
-
+client.on("voiceStateUpdate", async(newState, oldState ) =>{
+    if(!oldState.channelId){
+        if(!((newState.channel?.members as Collection<Snowflake, GuildMember>).size - 1)){
+            await wait(300000)
+             if(!((newState.channel?.members as Collection<Snowflake, GuildMember>).size - 1)) guildMap.get(newState.guild.id)?.destroy()
+        }
+    }
+})
 
 // Make sure the evn file containing bot token exists 
 client.login(constants.TOKEN)

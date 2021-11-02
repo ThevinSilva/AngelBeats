@@ -13,7 +13,7 @@ export = {
 			guildQueue.playNext(true)
         	await interaction.reply({ content: " ⏭️ **skip** "})
 		}else{
-			await interaction.reply({ content: " 🛑 **cannot skip queue empty** "})
+			await interaction.reply({ content: " 🛑 **cannot skip queue is empty** "})
 		}
 	}
 };

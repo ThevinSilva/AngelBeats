@@ -22,12 +22,13 @@ const wait = promisify(setTimeout)
     @link - https://github.com/discordjs/voice/blob/main/examples/music-bot/src/music/subscription.ts
 */
 
-
+// ADD AUTO TIMEOUT function 
 
 interface GuildQueueData{
     //structure of Guild
     guildId: Snowflake, //GuildId property of interaction
     channelId:Snowflake,//voice.channel property of interaction
+    MAX: number,// maximum number of items allowed in the queue
     enqueue:(url:string,title:string) => Promise<void>,//adds 
     batchEnqueue:<T>(videos:Array<T>) => Promise<void>,
     isEmpty:() => Boolean, 
@@ -41,6 +42,7 @@ interface GuildQueueData{
 
 class GuildQueue implements GuildQueueData{
     
+    public readonly MAX;
     public readonly guildId;
     public channelId;
     private queue:Track[];
@@ -65,6 +67,7 @@ class GuildQueue implements GuildQueueData{
         this.readyLock = false;
         this.queue = [];
         this.removeGuild = callback;
+        this.MAX = 550
 
         // Event Listener - listen do Disconnect
         this.connection.on('stateChange', async (_, newState) => {
@@ -91,6 +94,7 @@ class GuildQueue implements GuildQueueData{
 					*/
 					this.destroy();
 				}
+                
             }else if(!this.readyLock && 
                 (newState.status === VoiceConnectionStatus.Connecting || newState.status === VoiceConnectionStatus.Signalling)){
                     this.readyLock = true;
@@ -114,15 +118,12 @@ class GuildQueue implements GuildQueueData{
 
         // Event Listener - When BOT becomes idle next track is played
 		this.audioPlayer.on('stateChange', (oldState, newState) => {
-            console.log("oldState",oldState.status)
-            console.log("newstate",newState.status)
             if(newState.status === AudioPlayerStatus.Idle && oldState.status !== AudioPlayerStatus.Idle){
                 this.playing = false
                 this.playNext()
             }else{
                 this.playing = true
             }
-            console.log(this.playing)
 		});
 
 
@@ -136,17 +137,25 @@ class GuildQueue implements GuildQueueData{
 
     public async enqueue(url:string,title:string){
         //add promise to queue
-        this.queue.push(new Track(url,title));
-        this.playNext()
+        if(this.queue.length < this.MAX){
+
+            this.queue.push(new Track(url,title));
+            
+            this.playNext()
+        
+        }
     }
 
     public async batchEnqueue(videos:Array<any>){
-        
         for(let video of videos){
-            this.queue.push(new Track(
-                `http://www.youtube.com/watch?v=${video.videoId}`,
+            if(this.queue.length < this.MAX && video){
+            
+                this.queue.push(new Track(
+                `http://www.youtube.com/watch?v=${video.videoId || video.id}`,
                 video.title
             ));
+
+            }
         }
 
         this.playNext()
@@ -172,6 +181,7 @@ class GuildQueue implements GuildQueueData{
         Getter method for queue
     */
     public display(){
+        // returns queue
         return this.queue
     }
 
@@ -200,8 +210,11 @@ class GuildQueue implements GuildQueueData{
         //Audioplayer plays the next track in the queue
        if(forced || (!this.isEmpty() && !this.playing)){ 
            const track : Track = this.queue.shift() as Track
-            try{
-                const trackAudioResource : AudioResource = await track.createAudioResource()
+           let trackAudioResource : AudioResource; 
+           try{
+                let url = new URL(track.url)
+                if(url.hostname.includes("soundcloud")) trackAudioResource = await track.createAudioResourceSoundcloud()
+                else  trackAudioResource  = await track.createAudioResource() 
                 this.audioPlayer.play(trackAudioResource)  
             } 
             catch(e){

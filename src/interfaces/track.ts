@@ -1,5 +1,6 @@
 import {AudioResource, createAudioResource, demuxProbe} from '@discordjs/voice';
 import { raw as ytdl } from "youtube-dl-exec";
+import soundcloud from "soundcloud-scraper";
 
 // Track interfaces with two libraries "youtube-dl-exec" and "discordjs/voices"
 // It gets a stream of audio from yt then converts it into 
@@ -7,15 +8,20 @@ import { raw as ytdl } from "youtube-dl-exec";
 // be read by a "AudioPlayer"
 // please refer to https://discordjs.github.io/voice/
 // for further clarification
+
+
 class Track{
 
     public url: string;
     public title: string; 
 
     public constructor(url:string,title:string){
-        this.title = title
-        this.url = url
-    }
+
+		this.title = title
+        
+		this.url = url
+
+	}
 
     /*
     * I plagerised this this I originally used "ytdl-core" which was a piece of shit 
@@ -54,6 +60,27 @@ class Track{
 				})
 				.catch(onError);
 		});
+	}
+
+	public createAudioResourceSoundcloud(): Promise<AudioResource<Track>>{
+		let client = new soundcloud.Client()
+		return new Promise((resolve, reject) => {
+			client.getSongInfo(this.url)
+				.then(async song => {
+					try{
+						const stream = await song.downloadProgressive();
+						const probe = await demuxProbe(stream)
+						resolve(createAudioResource(probe.stream, { metadata: this, inputType: probe.type })) 
+						
+					}catch(e){
+						reject(e)
+					}
+				
+				})
+			.catch(console.error);
+
+		})
+
 	}
 
 }
