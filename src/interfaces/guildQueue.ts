@@ -148,15 +148,26 @@ class GuildQueue implements GuildQueueData{
 
     public async batchEnqueue(videos:Array<any>){
         for(let video of videos){
-            if(this.queue.length < this.MAX && video){
-            
+            if((this.queue.length < this.MAX) && video){
+
+                
+            if(video.videoId || video.id){    
                 this.queue.push(new Track(
                 `http://www.youtube.com/watch?v=${video.videoId || video.id}`,
                 video.title
-            ));
-
+                    ));
+                }
+            
+            if(video.url){
+                this.queue.push(new Track(
+                    video.url,
+                    video.title
+                    ));
+                }
             }
+            
         }
+        
 
         this.playNext()
     }

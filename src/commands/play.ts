@@ -7,6 +7,9 @@ import ytsr from "ytsr";
 import searchitunes from 'searchitunes';
 import { getPlaylist } from "apple-music-playlist";
 import sndcld from "soundcloud-scraper";
+import Soundcloud from 'soundcloud.ts';
+
+
 
 //array containing keywords to youtube list
 const batchYoutubeConvert = async (tracks:Array<{ title: string , artist: string }>) => {
@@ -50,78 +53,84 @@ export = {
 		await interaction.deferReply()
 
 		if(/^https?:\/\/([\w\d\-]+\.)+\w{2,}(\/.+)?$/.test(userInput)){
-			const url = new URL(userInput);
+			let url = new URL(userInput);
 			url.searchParams.delete('t');
 			switch(true){
 
-				case url.hostname.includes("youtube") || url.hostname.includes("youtu.be")   :
+				case url.hostname.includes("youtube") || url.hostname.includes("youtu.be"):
 					
-					if(url.searchParams.get("list")){
+					try{
+						if(url.searchParams.get("list")){
 
-						let index = Number(url.searchParams.get("index")) || 0 
-						
-						playlist = await yts({listId: url.searchParams.get("list") as any})
-
-						embed = new MessageEmbed()
-						.setColor('#FF7F7F')
-						.setTitle(`by ${playlist.author.name}`)
-						.setURL(playlist.url)
-						.setAuthor(playlist.title)
-						.setImage(playlist.thumbnail)	
-
-						playlist = playlist.videos.slice(index,-1)
-						
-					}else{
-						video = (await yts(url.toString())).videos[0]
-						
-
-						embed = new MessageEmbed()
-							.setColor('#FF7F7F')
-							.setTitle(`by ${video.author.name}`)
-							.setURL(video.url)
-							.setAuthor(video.title)
-							.setImage(video.thumbnail)			
+							let index = Number(url.searchParams.get("index")) || 0 
 							
-					}
+							let playlistData = await yts({listId: url.searchParams.get("list") as any})
 
+							embed = new MessageEmbed()
+							.setColor('#FF7F7F')
+							.setTitle(`by ${playlistData.author.name}`)
+							.setURL(playlistData.url)
+							.setAuthor(playlistData.title)
+							.setImage(playlistData.thumbnail)	
+
+							playlist = playlistData.videos.slice(index,-1)
+							
+						}else{
+							video = (await yts(url.toString())).videos[0]
+							
+
+							embed = new MessageEmbed()
+								.setColor('#FF7F7F')
+								.setTitle(`by ${video.author.name}`)
+								.setURL(video.url)
+								.setAuthor(video.title)
+								.setImage(video.thumbnail)			
+								
+						}
+					}catch(e){
+						console.log(e)
+					}
 					break;
 
 				case url.hostname.includes("spotify") :
 
-					let spotifyTrackData = await getPreview(userInput)
+					try{
+						let spotifyTrackData = await getPreview(userInput)
 
 
-					embed = new MessageEmbed()
-						.setColor('#90ee90')
-						.setTitle(`by ${spotifyTrackData.artist}`)
-						.setURL(spotifyTrackData.link)
-						.setAuthor(spotifyTrackData.title)
-						.setImage(spotifyTrackData.image)
+						embed = new MessageEmbed()
+							.setColor('#90ee90')
+							.setTitle(`by ${spotifyTrackData.artist}`)
+							.setURL(spotifyTrackData.link)
+							.setAuthor(spotifyTrackData.title)
+							.setImage(spotifyTrackData.image)
+							
 						
-					
 
 
-						if(spotifyTrackData && spotifyTrackData.type !== "track" ){							
-							/* 
-								This is very janky there is no two ways about it 
-							*/					
-							embed.title = spotifyTrackData.title
-							embed.author = null
+							if(spotifyTrackData && spotifyTrackData.type !== "track" ){							
+								/* 
+									This is very janky there is no two ways about it 
+								*/					
+								embed.title = spotifyTrackData.title
+								embed.author = null
 
-							let trackData = await getTracks(userInput)
-														
-							playlist = await batchYoutubeConvert(Array.from(trackData,(data) => 
-								({title: data.name , artist: (data.artists as ArtistsEntity[])[0].name })
-								)
-							)							
-							
+								let trackData = await getTracks(userInput)
+															
+								playlist = await batchYoutubeConvert(Array.from(trackData,(data) => 
+									({title: data.name , artist: (data.artists as ArtistsEntity[])[0].name })
+									)
+								)							
+								
 
-						}else if(spotifyTrackData.type === "track" ){							
-							
-							video = (await ytsr((spotifyTrackData as Preview).title + " " + (spotifyTrackData as Preview).artist, { limit: 1})).items[0]
+							}else if(spotifyTrackData.type === "track" ){							
+								
+								video = (await ytsr((spotifyTrackData as Preview).title + " " + (spotifyTrackData as Preview).artist, { limit: 1})).items[0]
 
-						}	
-
+							}	
+					}catch(e){
+						console.log(e)
+					}
 					break;
 
 				case url.hostname.includes("apple"):
@@ -173,32 +182,66 @@ export = {
 
 					break;
 
-				// case url.hostname.includes("soundcloud"):
+				case url.hostname.includes("soundcloud"):
 					
-				// 	paths = url.pathname.split("/");
+					paths = url.pathname.split("/");
+					
+					url = new URL("https://" + url.hostname + url.pathname)
+					
 
-				// 	console.log(paths)
+					
+					let client = new sndcld.Client()
 
-				// 	if(paths.includes("sets")){
-				// 		console.log("playlist")
+					if(paths.includes("sets")){
+						try{
 
-				// 	}
+							const soundcloud = new Soundcloud()
 
-				// 	if(!paths.includes("sets") && paths.length == 3){
-				// 		console.log("song")
+							let trackData = await soundcloud.playlists.getV2(url.toString())
+							
+							let sndcldData = await client.getPlaylist(url.toString())
 
-				// 	// let sndcldData = await sndcld.getSong(url.toString())
-				// 	// embed = new MessageEmbed()
-				// 	// 	.setColor('#FFFFFF')
-				// 	// 	.setTitle(`by ${itunesData.artistName}`)
-				// 	// 	.setURL(itunesData.collectionViewUrl)
-				// 	// 	.setAuthor(itunesData.collectionName)
-				// 	// 	.setImage(itunesData.artworkUrl100)
+							embed = new MessageEmbed()
+							.setColor('#FFD580')
+							.setTitle(`by ${sndcldData.author.name}`)
+							.setURL(sndcldData.url)
+							.setAuthor(sndcldData.title)
+							embed.setImage(sndcldData.thumbnail)
+							
+							
+							playlist = Array.from(trackData.tracks,(x) => ({url:(x as any).permalink_url, title: x.title}))
+							
+						}catch(e){
+							console.log(e)
+						}
+						
+					}
+					
+					if(!paths.includes("sets") && paths.length == 3){
+						
+						
+						try{
+
+							console.log("song")
+							video = await client.getSongInfo(url.toString())
+
+							embed = new MessageEmbed()
+								.setColor("#FFD580")
+								.setTitle(`by ${video.author.name}`)
+								.setURL(video.url)
+								.setAuthor(video.title)
+								.setImage(video.thumbnail)
+
+						}catch(e){
+							console.log(e)
+						}
+							
+
 					
 					
 					
-				// }
-				// break;
+				}
+				break;
   
 			}
 		}else{
@@ -217,23 +260,22 @@ export = {
 
 			if(playlist){
 
-				if((playlist as any).length < 550 ){
+				if(playlist.length < 550 ){
 					
 					await interaction.editReply({ content : "🎶 playlist is now being added to queue "})
 					
 					await (textChannel as TextBasedChannels).send({embeds: [embed as MessageEmbed]});
 					
-					guildQueue.batchEnqueue(playlist as any)
+					guildQueue.batchEnqueue(playlist)
 					
 					return 
 				}else{
-					await interaction.editReply({ content : " playlist too big please try a different playlist needs to be less than 550"})
+					await interaction.editReply({ content : " playlist too big please try a different playlist needs to be less than 550 "})
 					return 
 				}
 			}
 			
 			if(video){
-
 			
 				// inside a command, event listener, etc.
 

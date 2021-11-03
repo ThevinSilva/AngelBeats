@@ -70,10 +70,10 @@ class Track{
 					try{
 						const stream = await song.downloadProgressive();
 						const probe = await demuxProbe(stream)
-						resolve(createAudioResource(probe.stream, { metadata: this, inputType: probe.type })) 
+						resolve(createAudioResource(probe.stream, { metadata: this, inputType: probe.type })); 
 						
 					}catch(e){
-						reject(e)
+						console.log(e)
 					}
 				
 				})

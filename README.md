@@ -1,6 +1,10 @@
 # AngelBeats
 
+![Tux, the Linux mascot](./angelBeats.png)
+
 A discrod bot that plays music...
+
+Now supports <B>Spotify</B> , <B>Youtube</B> , <B>Soundcloud</B> and <B>Apple Music</B>
 
 ## Commands
 
@@ -57,7 +61,12 @@ check the package.json incase I missed something
 
 ## Development
 
-With in the main "src" file , the "commands" folder contains modules of all the commands. The "interfaces" folder contains two structures. A "GuildMap" which is a hashtable with a server's id as a key which maps to a structure called a "guildQueue" . A "guildQueue" consists of "Tracks"/songs , a "AudioPlayer" (discordjs/voice) as well as other built-in functionality that interface with different components and simplify writing command.
+- With in the main "src" file , the "commands" folder contains modules of all the commands.
+
+- The "interfaces" folder contains two structures.
+
+- A "GuildMap" which is a hashtable with a server's id as a key which maps to a structure called a "guildQueue" .
+- A "guildQueue" consists of "Tracks"/songs , a "AudioPlayer" (discordjs/voice) as well as other built-in functionality that interface with different components and simplify writing command.
 
 ### SUCESS CRITERIA
 

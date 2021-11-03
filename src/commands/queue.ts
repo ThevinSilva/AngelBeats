@@ -34,7 +34,7 @@ export = {
                 let queue = guildQueue.display()
                 
                 if(queue.length < 5){ 
-                    let fields = Array.from(queue.slice(0,queue.length),(x,v ) => ({name: v.toString(), value:"#" + x.title || "ANGELBEATS: I c u are very cultured this song has no name " }) )
+                    let fields = Array.from(queue.slice(0,queue.length),(x,v ) => ({name: "#" +  v.toString(), value: x.title || "ANGELBEATS: I c u are very cultured this song has no name " }) )
                     await (interaction.channel as TextBasedChannels).send({embeds: [
                         new MessageEmbed()
                             .addFields(fields)
@@ -45,7 +45,7 @@ export = {
                 // 256 + x + x(1024) < 6000 =>  Safe maximum of 5 embeds per message
                 for(let i = 0;i < (Math.floor(queue.length / 5) * 5) ;i+=5){
                     
-                    let embedFields = Array.from(queue.slice(i,i + 5),(x,v) => ({name: (i + v).toString(), value: "#" + x.title || "ANGELBEATS: I c u are very cultured this song has no name " }))
+                    let embedFields = Array.from(queue.slice(i,i + 5),(x,v) => ({name: "#" + (i + v).toString(), value: x.title || "ANGELBEATS: I c u are very cultured this song has no name " }))
                     embeds.push(new MessageEmbed().addFields(embedFields))
                    
                     if(i >= 45) break;
