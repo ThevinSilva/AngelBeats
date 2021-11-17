@@ -76,8 +76,10 @@ export = {
 							playlist = playlistData.videos.slice(index,-1)
 							
 						}else{
-							video = (await yts(url.toString())).videos[0]
-							
+							if(url.searchParams.get("v")){
+
+								video = (await yts({videoId : url.searchParams.get("v") as any})) 		
+							}else video = (await yts(url.toString())).videos[0]
 
 							embed = new MessageEmbed()
 								.setColor('#FF7F7F')

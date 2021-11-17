@@ -27,7 +27,7 @@ const rest = new REST({ version: '9' }).setToken(constants.TOKEN);
 		await rest.put(
 			//remove the constants.GUILD_ID parameter 
 			// Routes.applicationCommands(constants.CLIENT_ID),
-			Routes.applicationGuildCommands(constants.CLIENT_ID, constants.GUILD_ID),
+			Routes.applicationGuildCommands(constI:ants.CLIENT_ID, constants.GUILD_ID),
 			{ body: commands },
 		);
 

@@ -13,7 +13,6 @@ const wait = promisify(setTimeout)
 * @link:https://discordjs.guide/
 */
 
-
 //create a new Client instance
 const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_VOICE_STATES] });
 
