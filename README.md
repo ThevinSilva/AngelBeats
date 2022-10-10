@@ -2,7 +2,7 @@
 
 ![Tux, the Linux mascot](./angelBeats.png)
 
-A discrod bot that plays music...
+A discord bot that plays music...
 
 Now supports <B>Spotify</B> , <B>Youtube</B> , <B>Soundcloud</B> and <B>Apple Music</B>
 
